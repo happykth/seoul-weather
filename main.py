@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
+# 페이지 기본 설정
 st.set_page_config(
     page_title="서울 100년 기온 변화 관측",
     page_icon="🌡️",
@@ -11,6 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# 커스텀 CSS 스타일링
 st.markdown("""
 <style>
     .main-title {
@@ -297,6 +299,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
+
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 10년 단위(시대별) 평균 기온", 
     "🌡️ 일별 기온 분포 (히스토그램)", 
@@ -438,96 +441,6 @@ with tab3:
     st.caption("💡 점의 색상은 해당 날짜의 월(1~12월)을 나타냅니다. 회색 점선은 최저기온과 최고기온이 동일한 선(일교차 0℃)으로, 점이 이 선에서 수직으로 멀어질수록 그날의 일교차가 크다는 것을 보여줍니다.")
 
 with tab4:
-    st.subheader("📋 선택 기간 연도별 통계 데이터")
-    
-    # 관측 데이터가 있는 연도만 표에 표시
-    display_df = filtered_yearly.dropna(subset=['평균기온'])[['연도', '평균기온', '최저기온평균', '최고기온평균', '최고기온극값', '최저기온극값']].copy()
-
-
-with tab1:
-    st.subheader("🏛️ 10년 단위(Decade) 평균 기온 변화")
-    
-    # 10년 단위 그룹화
-    yearly_df['시대'] = (yearly_df['연도'] // 10) * 10
-    decade_df = yearly_df.groupby('시대').agg(
-        시대평균기온=('평균기온', 'mean'),
-        연도수=('연도', 'count')
-    ).reset_index()
-    
-    decade_df['시대라벨'] = decade_df['시대'].astype(str) + "년대"
-    
-    fig_decade = px.bar(
-        decade_df,
-        x='시대라벨',
-        y='시대평균기온',
-        text_auto='.2f',
-        color='시대평균기온',
-        color_continuous_scale='Reds',
-        labels={'시대라벨': '시대', '시대평균기온': '평균기온 (℃)'}
-    )
-    
-    fig_decade.update_layout(
-        coloraxis_showscale=False,
-        height=380,
-        margin=dict(l=20, r=20, t=30, b=20),
-        template="plotly_white",
-        yaxis=dict(range=[decade_df['시대평균기온'].min() - 0.5, decade_df['시대평균기온'].max() + 0.5])
-    )
-    
-    st.plotly_chart(fig_decade, use_container_width=True)
-    st.caption("💡 최근 시대로 올수록 서울의 연평균 기온이 지속적으로 상승하는 명확한 온난화 경향을 보입니다.")
-
-with tab2:
-    st.subheader("🌡️ 선택 기간 일별 평균기온 분포 (히스토그램)")
-    
-    # 선택된 기간의 일별 데이터 필터링
-    filtered_daily = df_raw[
-        (df_raw['연도'] >= selected_years[0]) & 
-        (df_raw['연도'] <= selected_years[1])
-    ].copy()
-    
-    # 히스토그램 차트 생성
-    fig_hist = px.histogram(
-        filtered_daily,
-        x='평균기온',
-        nbins=50,
-        labels={'평균기온': '일 평균기온 (℃)', 'count': '일수 (일)'},
-        color_discrete_sequence=['#3B82F6'],
-        opacity=0.85
-    )
-    
-    # 평균기온 및 중앙값 표시 선 추가
-    mean_temp = filtered_daily['평균기온'].mean()
-    median_temp = filtered_daily['평균기온'].median()
-    
-    fig_hist.add_vline(
-        x=mean_temp, 
-        line_dash="dash", 
-        line_color="#EF4444", 
-        annotation_text=f"평균: {mean_temp:.1f}℃", 
-        annotation_position="top left"
-    )
-    fig_hist.add_vline(
-        x=median_temp, 
-        line_dash="dot", 
-        line_color="#10B981", 
-        annotation_text=f"중앙값: {median_temp:.1f}℃", 
-        annotation_position="top right"
-    )
-    
-    fig_hist.update_layout(
-        yaxis_title="날짜 수 (일)",
-        xaxis_title="일 평균기온 (℃)",
-        height=380,
-        margin=dict(l=20, r=20, t=30, b=20),
-        template="plotly_white",
-        bargap=0.08
-    )
-    
-    st.plotly_chart(fig_hist, use_container_width=True)
-    st.caption("💡 선택한 연도 구간의 일별 평균기온 분포를 보여줍니다. 평균값(빨간 점선)과 중앙값(초록 점선)을 통해 기온이 어느 온도 구간에 가장 집중되어 있는지 한눈에 확인할 수 있습니다.")
-
-with tab3:
     st.subheader("📋 선택 기간 연도별 통계 데이터")
     
     # 관측 데이터가 있는 연도만 표에 표시
