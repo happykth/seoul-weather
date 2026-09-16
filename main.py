@@ -119,12 +119,17 @@ yearly_df = df_raw.groupby('연도').agg(
 # 관측 일수가 너무 적은 해(예: 전쟁 기간 등 데이터 누락 연도) 예외 처리
 yearly_df = yearly_df[yearly_df['관측일수'] > 300].copy()
 
-# 선형 회귀 추세선 계산 (전체 기간 기온 상승 폭 측정)
-slope, intercept = np.polyfit(yearly_df['연도'], yearly_df['평균기온'], 1)
-yearly_df['추세선'] = slope * yearly_df['연도'] + intercept
-
 min_year = int(yearly_df['연도'].min())
 max_year = int(yearly_df['연도'].max())
+
+# 누락된 연도를 NaN으로 남겨서 그래프 선이 끊어지도록 전체 연도 데이터 병합
+all_years = pd.DataFrame({'연도': range(min_year, max_year + 1)})
+yearly_df = pd.merge(all_years, yearly_df, on='연도', how='left')
+
+# 선형 회귀 추세선 계산 (결측치 제외 후 전체 기간 기온 상승 폭 측정)
+valid_years = yearly_df.dropna(subset=['평균기온'])
+slope, intercept = np.polyfit(valid_years['연도'], valid_years['평균기온'], 1)
+yearly_df['추세선'] = slope * yearly_df['연도'] + intercept
 
 st.sidebar.image("https://img.icons8.com/fluency/96/thermometer.png", width=64)
 st.sidebar.title("🎛️ 분석 옵션 설정")
@@ -178,7 +183,7 @@ with col1:
     <div class="metric-card">
         <div class="metric-label">선택 기간 연평균 기온</div>
         <div class="metric-value">{avg_temp_overall:.2f} ℃</div>
-        <div class="metric-sub" style="color:#64748B;">총 {len(filtered_yearly)}개 연도 관측</div>
+        <div class="metric-sub" style="color:#64748B;">총 {filtered_yearly['평균기온'].count()}개 연도 관측</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -222,6 +227,7 @@ if show_minmax_range:
         y=filtered_yearly['최고기온평균'],
         mode='lines',
         line=dict(width=0),
+        connectgaps=False,
         showlegend=False,
         hoverinfo='skip'
     ))
@@ -233,15 +239,17 @@ if show_minmax_range:
         fill='tonexty',
         fillcolor='rgba(239, 68, 68, 0.1)',
         name='최저~최고 평균 범위',
+        connectgaps=False,
         hoverinfo='skip'
     ))
 
-# 연평균 기온 기본 선 그래프
+# 연평균 기온 기본 선 그래프 (누락 연도는 선이 끊기도록 connectgaps=False 설정)
 fig.add_trace(go.Scatter(
     x=filtered_yearly['연도'],
     y=filtered_yearly['평균기온'],
     mode='lines+markers',
     name='연평균 기온',
+    connectgaps=False,
     line=dict(color='#3B82F6', width=1.5),
     marker=dict(size=5, color='#1D4ED8'),
     hovertemplate='%{x}년: <b>%{y:.2f} ℃</b><extra></extra>'
@@ -253,6 +261,7 @@ fig.add_trace(go.Scatter(
     y=filtered_yearly['이동평균'],
     mode='lines',
     name=f'{ma_window}년 이동평균',
+    connectgaps=False,
     line=dict(color='#EF4444', width=3),
     hovertemplate='%{x}년근처 (%{text}): <b>%{y:.2f} ℃</b><extra></extra>',
     text=[f'{ma_window}년 평균' for _ in range(len(filtered_yearly))]
@@ -326,7 +335,8 @@ with tab1:
 with tab2:
     st.subheader("📋 선택 기간 연도별 통계 데이터")
     
-    display_df = filtered_yearly[['연도', '평균기온', '최저기온평균', '최고기온평균', '최고기온극값', '최저기온극값']].copy()
+    # 관측 데이터가 있는 연도만 표에 표시
+    display_df = filtered_yearly.dropna(subset=['평균기온'])[['연도', '평균기온', '최저기온평균', '최고기온평균', '최고기온극값', '최저기온극값']].copy()
     display_df.columns = ['연도', '연평균기온(℃)', '최저기온평균(℃)', '최고기온평균(℃)', '연중최고기온(℃)', '연중최저기온(℃)']
     
     st.dataframe(
